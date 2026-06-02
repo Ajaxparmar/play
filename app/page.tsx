@@ -121,8 +121,8 @@ export default function SattaPage() {
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {[
               { label: "Home", href: "/" },
-              { label: "Chart 2025", href: "/chart2025" },
-              { label: "Chart 2024", href: "/chart2024" },
+              { label: "Chart 2025", href: "/#" },
+              { label: "Chart 2024", href: "/#" },
             ].map(({ label, href }) => (
               <Link
                 key={label}
