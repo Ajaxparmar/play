@@ -130,23 +130,51 @@ export default function SattaPage() {
         </p>
       </div>
 
-      {/* ── Disawar highlight ── */}
-      <div className="bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 p-3 text-center w-full">
-        <p className="text-3xl font-extrabold mb-4 uppercase text-black">
-          {/* Show the active sattaname from the API, fallback to DISAWAR */}
-          {record?.sattaname?.toUpperCase() ?? "DISAWAR"}
+      {/* ── Area1 & Area2 game results (like SHRI GANESH / DELHI MATKA) ── */}
+      <div className="bg-white">
+        {/* Area 1 result */}
+        <div className="py-6 text-center border-b border-gray-200">
+          <p className="text-2xl font-extrabold uppercase text-red-600 tracking-wide mb-2">
+            {record?.area1?.toUpperCase() ?? "--"}
+          </p>
+          <p className="text-4xl font-extrabold text-black">
+            {record?.number1 != null
+              ? String(record.number1).padStart(2, "0")
+              : "--"}
+          </p>
+        </div>
+
+        {/* Area 2 result */}
+        <div className="py-6 text-center border-b border-gray-200">
+          <p className="text-2xl font-extrabold uppercase text-red-600 tracking-wide mb-2">
+            {record?.area2?.toUpperCase() ?? "--"}
+          </p>
+          <p className="text-4xl font-extrabold text-black">
+            {record?.number2 != null
+              ? String(record.number2).padStart(2, "0")
+              : "--"}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Disawar / sattaname highlight ── */}
+      <div className="bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 p-4 text-center w-full">
+        <p className="text-2xl font-extrabold uppercase text-black mb-1">
+        DISAWAR
         </p>
-        <div className="flex items-center gap-3 justify-center max-w-[350px] mx-auto">
-          {/* "from" = yesterday-like result, "to" = today-like result */}
+        <div className="flex items-center gap-3 justify-center max-w-[350px] mx-auto mt-2">
+          {/* from = previous result, to = latest result */}
           <span className="text-xl font-semibold text-black">
-            {record?.from ?? "--"}
+            {record?.from ?? "-"}
           </span>
           <span className="px-2 py-0.5 border bg-green-500 border-white text-white rounded-md text-lg">
             ➜
           </span>
           <span className="text-xl font-semibold">
             {record?.to != null ? (
-              <span className="text-black font-bold text-2xl">{record.to}</span>
+              <span className="text-black font-bold text-2xl">
+                {record.to}
+              </span>
             ) : (
               <WaitIcon />
             )}
