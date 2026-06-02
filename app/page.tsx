@@ -94,6 +94,24 @@ export default function SattaPage() {
   // The API only returns ONE game record. We map it to the row whose name
   // matches `record.sattaname` (case-insensitive). All other rows show "--".
   const activeGameName = record?.sattaname?.toUpperCase() ?? "";
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+  
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedDateTime = currentTime.toLocaleString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a0000] to-[#3a0000]">
@@ -133,6 +151,11 @@ export default function SattaPage() {
       {/* ── Area1 & Area2 game results (like SHRI GANESH / DELHI MATKA) ── */}
       <div className="bg-white">
         {/* Area 1 result */}
+        <div className="bg-white py-4 text-center">
+  <h2 className="text-xl font-bold text-gray-800">
+    {formattedDateTime}
+  </h2>
+</div>
         <div className="py-6 text-center border-b border-gray-200">
           <p className="text-2xl font-extrabold uppercase text-red-600 tracking-wide mb-2">
             {record?.area1?.toUpperCase() ?? "--"}
