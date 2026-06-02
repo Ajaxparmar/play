@@ -1,24 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface GameResult {
-  today: string | null;
-  yesterday: string | null;
+
+/** Shape of a single record returned by /api/home */
+interface SattaRecord {
+  id: string;
+  name: string;
+  area1: string;
+  number1: number | null;
+  area2: string;
+  number2: number | null;
+  sattaname: string;
+  from: number;
+  to: number;
+  createdAt: string;
 }
 
-interface StoreData {
-  disawar: GameResult;
-  games: Record<string, GameResult>;
-  setting: {
-    siteName: string;
-    contactName: string;
-    whatsappNumber: string;
-    rate: string;
-  };
+/** /api/home returns { data: SattaRecord } */
+interface ApiResponse {
+  data: SattaRecord;
 }
 
 // ─── Game schedule ────────────────────────────────────────────────────────────
@@ -48,36 +51,49 @@ function WaitIcon() {
   );
 }
 
-function ResultCell({ value }: { value: string | null }) {
-  if (!value) return <WaitIcon />;
-  return <span className="text-2xl font-bold tracking-widest text-black">{value}</span>;
+/** Show a result value or a waiting spinner */
+function ResultCell({ value }: { value: number | null | undefined }) {
+  if (value == null) return <WaitIcon />;
+  return (
+    <span className="text-2xl font-bold tracking-widest text-black">
+      {value}
+    </span>
+  );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SattaPage() {
-  const [data, setData] = useState<StoreData | null>(null);
-  const currentMonth = new Date().toLocaleString("en-US", { month: "long" }).toUpperCase();
+  const [record, setRecord] = useState<SattaRecord | null>(null);
+
+  const currentMonth = new Date()
+    .toLocaleString("en-US", { month: "long" })
+    .toUpperCase();
   const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("/api/results");
-        const json = await res.json();
-        setData(json);
-      } catch {
-        // silently fail; UI shows wait icons
+        const res = await fetch("/api/home");
+        const json: ApiResponse = await res.json();
+        console.log("Fetched data:", json);
+        if (json?.data) setRecord(json.data);
+      } catch (err) {
+        console.error("Fetch error:", err);
+        // silently fail; UI shows wait icons / "--"
       }
     };
+
     fetchData();
-    // Poll every 30 seconds for live updates
     const interval = setInterval(fetchData, 30_000);
     return () => clearInterval(interval);
   }, []);
 
-  const whatsapp = data?.setting.whatsappNumber
-    ? `https://wa.me/${data.setting.whatsappNumber}`
-    : "https://wa.me/+91";
+  // Build a WhatsApp link — no phone number in this API, so keep a placeholder
+  const whatsapp = "https://wa.me/+91";
+
+  // The API only returns ONE game record. We map it to the row whose name
+  // matches `record.sattaname` (case-insensitive). All other rows show "--".
+  const activeGameName = record?.sattaname?.toUpperCase() ?? "";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a0000] to-[#3a0000]">
@@ -105,7 +121,7 @@ export default function SattaPage() {
       {/* ── Hero ── */}
       <div className="bg-gradient-to-b from-[#1a0000] via-[#3a0000] to-[#1a0000] px-2 pt-28 pb-8 text-center">
         <h2 className="text-4xl lg:text-5xl text-yellow-400 font-semibold mt-10 animate-bounce">
-          {data?.setting.siteName ?? "B1 SATTA"}
+          B1 SATTA
         </h2>
         <p className="text-white pb-12 mt-10 px-4 text-2xl md:text-3xl font-semibold">
           यही आती हे सबसे पहले खबर रूको और देखो
@@ -116,17 +132,21 @@ export default function SattaPage() {
 
       {/* ── Disawar highlight ── */}
       <div className="bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 p-3 text-center w-full">
-        <p className="text-3xl font-extrabold mb-4 uppercase text-black">Disawar</p>
+        <p className="text-3xl font-extrabold mb-4 uppercase text-black">
+          {/* Show the active sattaname from the API, fallback to DISAWAR */}
+          {record?.sattaname?.toUpperCase() ?? "DISAWAR"}
+        </p>
         <div className="flex items-center gap-3 justify-center max-w-[350px] mx-auto">
+          {/* "from" = yesterday-like result, "to" = today-like result */}
           <span className="text-xl font-semibold text-black">
-            {data?.disawar.yesterday ?? "--"}
+            {record?.from ?? "--"}
           </span>
           <span className="px-2 py-0.5 border bg-green-500 border-white text-white rounded-md text-lg">
             ➜
           </span>
           <span className="text-xl font-semibold">
-            {data?.disawar.today ? (
-              <span className="text-black font-bold text-2xl">{data.disawar.today}</span>
+            {record?.to != null ? (
+              <span className="text-black font-bold text-2xl">{record.to}</span>
             ) : (
               <WaitIcon />
             )}
@@ -144,12 +164,17 @@ export default function SattaPage() {
           </div>
           <div className="flex-1 px-2 pt-4 pb-6 text-base font-semibold leading-6 text-gray-900 bg-gradient-to-b from-[#1a0000] via-[#3a0000] to-[#1a0000]">
             <p className="uppercase mb-2 font-bold text-base lg:text-xl text-yellow-400">
-              ♕♕ {data?.setting.contactName || "BHAI KHAIWAL"} ♕♕
+              ♕♕ BHAI KHAIWAL ♕♕
             </p>
             <div className="text-start mx-auto max-w-[300px] text-white">
               {GAME_SCHEDULE.map(({ name, time }) => (
-                <div key={name} className="flex justify-between items-center font-semibold py-0.5">
-                  <span className="flex items-center gap-1 text-nowrap">⏰ {name}</span>
+                <div
+                  key={name}
+                  className="flex justify-between items-center font-semibold py-0.5"
+                >
+                  <span className="flex items-center gap-1 text-nowrap">
+                    ⏰ {name}
+                  </span>
                   <span className="text-yellow-400">---------</span>
                   <span className="text-nowrap">{time}</span>
                 </div>
@@ -164,11 +189,9 @@ export default function SattaPage() {
             <p className="text-white text-sm">
               🤑 Rate list 💸
               <br />
-              {data?.setting.rate ?? "जोड़ी रेट 10 | हरूफ रेट 100"}
+              जोड़ी रेट 10 | हरूफ रेट 100
             </p>
-            <p className="uppercase text-yellow-400">
-              ♕♕ {data?.setting.contactName || "BHAI KHAIWAL"} ♕♕
-            </p>
+            <p className="uppercase text-yellow-400">♕♕ BHAI KHAIWAL ♕♕</p>
             <a
               target="_blank"
               rel="noopener noreferrer"
@@ -198,14 +221,23 @@ export default function SattaPage() {
           <table className="w-full text-sm text-left text-gray-500 border-collapse border-gray-400">
             <thead className="text-base text-white bg-gradient-to-r from-red-800 to-black">
               <tr>
-                <th className="text-center border border-gray-800 py-3 w-[37%]">GAME NAME</th>
-                <th className="py-3 text-center border border-gray-800">YESTERDAY</th>
-                <th className="py-3 text-center border border-gray-800">TODAY RESULT</th>
+                <th className="text-center border border-gray-800 py-3 w-[37%]">
+                  GAME NAME
+                </th>
+                <th className="py-3 text-center border border-gray-800">
+                  YESTERDAY
+                </th>
+                <th className="py-3 text-center border border-gray-800">
+                  TODAY RESULT
+                </th>
               </tr>
             </thead>
             <tbody>
-              {GAME_SCHEDULE.map(({ name, time }, i) => {
-                const result = data?.games[name];
+              {GAME_SCHEDULE.map(({ name, time }) => {
+                // Match this row to the API record by sattaname
+                const isActiveGame =
+                  name.toUpperCase() === activeGameName;
+
                 return (
                   <tr key={name}>
                     <td className="py-2 px-2 text-center border border-gray-800 bg-gradient-to-b from-yellow-400 to-amber-500">
@@ -216,12 +248,18 @@ export default function SattaPage() {
                     </td>
                     <td className="text-center bg-white border border-gray-800 px-2 py-2">
                       <span className="text-2xl font-bold tracking-widest text-black">
-                        {result?.yesterday ?? "--"}
+                        {isActiveGame ? (record?.from ?? "--") : "--"}
                       </span>
                     </td>
                     <td className="text-center bg-white border border-gray-800 px-2 py-2">
                       <div className="flex justify-center">
-                        <ResultCell value={result?.today ?? null} />
+                        {isActiveGame ? (
+                          <ResultCell value={record?.to} />
+                        ) : (
+                          <span className="text-2xl font-bold tracking-widest text-black">
+                            --
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -238,7 +276,9 @@ export default function SattaPage() {
           <h2 className="sm:text-4xl text-black lg:text-5xl text-2xl font-bold mb-2 md:mb-6">
             {currentMonth} MONTH CHART
           </h2>
-          <p className="text-black text-2xl sm:text-4xl lg:text-5xl font-bold">{currentYear}</p>
+          <p className="text-black text-2xl sm:text-4xl lg:text-5xl font-bold">
+            {currentYear}
+          </p>
         </div>
         <div className="overflow-x-auto bg-white">
           <table className="w-full border-collapse">
@@ -248,7 +288,10 @@ export default function SattaPage() {
                   S.No
                 </th>
                 {GAME_SCHEDULE.map(({ name }) => (
-                  <th key={name} className="border border-gray-700 px-3 py-2 text-white text-xs">
+                  <th
+                    key={name}
+                    className="border border-gray-700 px-3 py-2 text-white text-xs"
+                  >
                     {name}
                   </th>
                 ))}
@@ -256,7 +299,10 @@ export default function SattaPage() {
             </thead>
             <tbody>
               {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
-                <tr key={day} className={day % 2 === 0 ? "bg-gray-100" : "bg-white"}>
+                <tr
+                  key={day}
+                  className={day % 2 === 0 ? "bg-gray-100" : "bg-white"}
+                >
                   <td className="px-3 py-2 text-center text-white bg-red-900 text-sm font-medium sticky left-0 z-10 border border-gray-700">
                     {day}
                   </td>
@@ -302,10 +348,11 @@ export default function SattaPage() {
         >
           http:/B1sattaplay.in
         </a>{" "}
-        is a non-commercial website. Viewing This Website Is Your Own Risk, All The Information
-        Shown On Website Is Sponsored And We Warn You That Matka Gambling/Satta May Be Banned Or
-        Illegal In Your Country. We Are Not Responsible For Any Issues Or Scam. We Respect All
-        Country Rules/Laws. If You Not Agree With Our Site Disclaimer, Please Quit Our Site Right
+        is a non-commercial website. Viewing This Website Is Your Own Risk, All
+        The Information Shown On Website Is Sponsored And We Warn You That Matka
+        Gambling/Satta May Be Banned Or Illegal In Your Country. We Are Not
+        Responsible For Any Issues Or Scam. We Respect All Country Rules/Laws.
+        If You Not Agree With Our Site Disclaimer, Please Quit Our Site Right
         Now. Thank You.
       </p>
     </div>
